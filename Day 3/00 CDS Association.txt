@@ -1,5 +1,27 @@
 @AbapCatalog.viewEnhancementCategory: [#NONE]
 @AccessControl.authorizationCheck: #NOT_REQUIRED
+@EndUserText.label: 'Total Sales per customer'
+@Metadata.ignorePropagatedAnnotations: true
+@ObjectModel.usageType:{
+    serviceQuality: #X,
+    sizeCategory: #S,
+    dataClass: #MIXED
+}
+define view entity ZHPC_AB_SALES_AGG as select from snwd_so as so
+inner join ZHPC_AB_BP_ADDR as bpa on
+so.buyer_guid = bpa.NodeKey
+{
+    bpa.NodeKey as BPGuid,
+    bpa.CompanyName,
+    bpa.Country,
+    @Semantics.amount.currencyCode: 'CurrencyCode'
+    sum(so.gross_amount) as TotalAmount,
+    so.currency_code as CurrencyCode    
+} group by bpa.NodeKey, bpa.CompanyName, bpa.Country, so.currency_code
+
+
+@AbapCatalog.viewEnhancementCategory: [#NONE]
+@AccessControl.authorizationCheck: #NOT_REQUIRED
 @EndUserText.label: 'Association concept'
 @Metadata.ignorePropagatedAnnotations: true
 @ObjectModel.usageType:{
@@ -7,16 +29,15 @@
     sizeCategory: #S,
     dataClass: #MIXED
 }
-define view entity ZMT_XX_VOV_ASSO as select from ZMT_XX_BASIC_BP(p_type: '01') as cust 
+define view entity ZHPC_AB_VOV_ASSO as select from ZHPC_AB_BASIC as cust 
 association[1..1] to snwd_ad as _Addr on
 $projection.AddressGuid = _Addr.node_key 
-association[1..1] to ZMT_XX_CDS_AGG as _Sales on
-$projection.NodeKey = _Sales.CustomerGuid
+association[1..1] to ZHPC_AB_SALES_AGG as _Sales on
+$projection.NodeKey = _Sales.BPGuid
 {
     key cust.NodeKey,
     cust.BpRole,
     cust.EmailAddress,
-    cust.WebAddress,
     cust.AddressGuid,
     cust.BpId,
     cust.CompanyName,
@@ -26,8 +47,6 @@ $projection.NodeKey = _Sales.CustomerGuid
     _Addr,
     _Sales
 }
-
-
 
 @AbapCatalog.viewEnhancementCategory: [#NONE]
 @AccessControl.authorizationCheck: #NOT_REQUIRED
@@ -39,7 +58,7 @@ $projection.NodeKey = _Sales.CustomerGuid
     dataClass: #MIXED
 }
 @OData.publish: true
-define view entity ZMT_XX_CUSTOMER_SALES as select from ZMT_XX_VOV_ASSO {
+define view entity ZHPC_AB_CUSTOMER_SALES as select from ZHPC_AB_VOV_ASSO {
     key NodeKey,
     CompanyName,
     _Addr.country,
