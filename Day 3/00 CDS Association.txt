@@ -11,7 +11,7 @@ define view entity ZHPC_AB_SALES_AGG as select from snwd_so as so
 inner join ZHPC_AB_BP_ADDR as bpa on
 so.buyer_guid = bpa.NodeKey
 {
-    bpa.NodeKey as BPGuid,
+    key bpa.NodeKey as BPGuid,
     bpa.CompanyName,
     bpa.Country,
     @Semantics.amount.currencyCode: 'CurrencyCode'
