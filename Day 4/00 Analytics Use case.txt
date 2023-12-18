@@ -1,0 +1,33 @@
+
+@AbapCatalog.sqlViewName: 'ZCHPC_ABSLSANA'
+@AbapCatalog.compiler.compareFilter: true
+@AbapCatalog.preserveKey: true
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+@EndUserText.label: 'Consumption for Sales Anlytics'
+@VDM.viewType: #CONSUMPTION
+@Analytics.query: true
+define view ZC_HPC_AB_SLS_ANALYTICS as select from ZI_HPC_AB_SALES_CUBE {
+    key ProductCategory,
+    key Text,
+    @AnalyticsDetails.query.axis: #ROWS
+    @Consumption.filter.selectionType: #RANGE
+    key CompanyName,
+    key Country,
+    @AnalyticsDetails.query.axis: #COLUMNS
+    @Consumption.filter.selectionType: #SINGLE
+    key CurrencyCode,
+    @Semantics.amount.currencyCode: 'CurrencyCode'
+    @AnalyticsDetails.query.axis: #COLUMNS
+    GrossAmount,
+    @Semantics.amount.currencyCode: 'CurrencyCode'
+    @Consumption.hidden: true
+    NetAmount,
+    @Semantics.amount.currencyCode: 'CurrencyCode'
+    @Consumption.hidden: true
+    TaxAmount,
+    @AnalyticsDetails.query.axis: #COLUMNS
+    @EndUserText.label: 'Donations'
+    @DefaultAggregation: #FORMULA
+    GrossAmount - TaxAmount  as Donations
+}
+
