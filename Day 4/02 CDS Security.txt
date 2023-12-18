@@ -14,7 +14,7 @@
 }
 @ObjectModel.representativeKey: 'BpId'
 
-define view entity ZI_MT_XX_CUSTOMER as select from snwd_bpa as Bpa 
+define view entity ZI_HPC_AB_CUSTOMER as select from snwd_bpa as Bpa 
 association[1] to snwd_ad as _Address on
 $projection.AddressGuid = _Address.node_key
 {
@@ -29,12 +29,12 @@ $projection.AddressGuid = _Address.node_key
 
 @EndUserText.label: 'Safe our data, DCL object'
 @MappingRole: true
-define role ZI_MT_XX_CUSTOMER_DCL {
+define role ZI_HPC_AB_CUSTOMER_DCL {
     grant 
         select
             on
-                ZI_MT_XX_CUSTOMER
+                ZI_HPC_AB_CUSTOMER
                     where
-                        (Country) = aspect pfcg_auth('ZMT_XX_2023', 'ZMTXX_CT', ACTVT = '03');
+                        (Country) = aspect pfcg_auth('ZHPC_AB_2023', 'ZMTXX_CT', ACTVT = '03');
                         
 }

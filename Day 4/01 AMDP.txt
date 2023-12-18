@@ -1,4 +1,4 @@
-CLASS ZMT_XX_amdp DEFINITION
+CLASS ZHPC_AB_amdp DEFINITION
   PUBLIC
   FINAL
   CREATE PUBLIC .
@@ -11,7 +11,7 @@ CLASS ZMT_XX_amdp DEFINITION
   PRIVATE SECTION.
 ENDCLASS.
 
-CLASS ZMT_XX_amdp IMPLEMENTATION.
+CLASS ZHPC_AB_amdp IMPLEMENTATION.
     METHOD get_oia by DATABASE PROCEDURE FOR HDB LANGUAGE SQLSCRIPT OPTIONS READ-ONLY
         USING zdp_cust snwd_bpa snwd_so_inv_head snwd_so_inv_item.
            DECLARE lv_client varchar(3);
@@ -75,15 +75,15 @@ ENDCLASS.
 
 
 *&---------------------------------------------------------------------*
-*& Report ZMT_XX_call_amdp
+*& Report ZHPC_AB_call_amdp
 *&---------------------------------------------------------------------*
 *&
 *&---------------------------------------------------------------------*
-REPORT ZMT_XX_call_amdp.
+REPORT ZHPC_AB_call_amdp.
 
 
 
-ZMT_XX_amdp=>get_oia(
+ZHPC_AB_amdp=>get_oia(
   IMPORTING
     et_oia = data(itab)
 ).
