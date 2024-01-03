@@ -13,7 +13,7 @@ ENDCLASS.
 
 CLASS ZHPC_AB_amdp IMPLEMENTATION.
     METHOD get_oia by DATABASE PROCEDURE FOR HDB LANGUAGE SQLSCRIPT OPTIONS READ-ONLY
-        USING zdp_cust snwd_bpa snwd_so_inv_head snwd_so_inv_item.
+        USING snwd_bpa snwd_so_inv_head snwd_so_inv_item.
            DECLARE lv_client varchar(3);
     declare lv_to_curr_code varchar(4);
     declare lv_max_amount decimal(10,2);
@@ -21,9 +21,9 @@ CLASS ZHPC_AB_amdp IMPLEMENTATION.
     declare lv_date date;
     declare i integer;
     --Step 1: Read all customizing
-    select mandt as client, currency_code, max_gross_amount, max_open_days, current_date into
+    select mandt as client, currency_code, 2000000, 430, current_date into
             lv_client, lv_to_curr_code, lv_max_amount, lv_max_days, lv_date
-            from zdp_cust where usrid = ( select ucase(session_context('APPLICATIONUSER')) FROM DUMMY );
+            from DUMMY;
 
     --Step 2: Open days on average since when invoice is open
     lt_days = select bpa.bp_id, bpa.company_name,
