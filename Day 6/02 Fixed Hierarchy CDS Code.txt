@@ -1,0 +1,112 @@
+@AbapCatalog.sqlViewName: 'ZSPPEMPLOYEE'
+@AbapCatalog.compiler.compareFilter: true
+@AbapCatalog.preserveKey: true
+@AccessControl.authorizationCheck: #CHECK
+@EndUserText.label: 'Employee manager Private view'
+@VDM.private: true
+--add below annotations
+@VDM.viewType: #BASIC
+@Analytics.dataCategory: #DIMENSION
+--comment below code
+--@ObjectModel.representativeKey: 'Empid'
+define view ZSP_P_EMPLOYEE as select from zoft_emp_mgr {
+--put as employee alias
+    
+    key empid as Employee,
+    --remove key for emp name
+    empname as Empname,
+    managerid as Managerid,
+    costcenter as Costcenter
+}
+
+
+@AbapCatalog.sqlViewName: 'ZSPIEMPHIER'
+@AbapCatalog.compiler.compareFilter: true
+@AbapCatalog.preserveKey: true
+@AccessControl.authorizationCheck: #CHECK
+@EndUserText.label: 'Employee Manager Hieararchy'
+@VDM.viewType: #BASIC
+@Analytics.dataCategory: #DIMENSION
+@ObjectModel.representativeKey: 'Employee'
+@Hierarchy.parentChild: [{
+                            name : 'EmployeeManager',
+                            recurse: { parent: ['Manager' ], child: ['Employee'] }
+ }]
+define view ZSP_I_EMPHIER as select from ZSP_P_EMPLOYEE 
+association[1..*] to ZSP_P_EMPLOYEE as _Manager on
+--add $projection with Manager
+$projection.Manager = _Manager.Employee
+{
+    @ObjectModel.text.element: ['EmployeeName']
+    --keep key just as Employee
+    key  Employee,
+        @Semantics.text: true
+        --remove the key
+        ZSP_P_EMPLOYEE.Empname as EmployeeName,
+        ZSP_P_EMPLOYEE.Managerid as Manager,
+        ZSP_P_EMPLOYEE.Costcenter as CostCenter,
+        _Manager
+           
+}
+
+
+
+@AbapCatalog.sqlViewName: 'ZSPCOEMPHR'
+@AbapCatalog.compiler.compareFilter: true
+@AbapCatalog.preserveKey: true
+@AccessControl.authorizationCheck: #CHECK
+@EndUserText.label: 'Employee and Timesheet data composition'
+@VDM.viewType: #COMPOSITE
+@Analytics.dataCategory: #CUBE
+@Analytics.dataExtraction.enabled: true
+define view ZSP_CO_EMPHR as select from zoft_emp_hrs 
+association[0..1] to ZSP_I_EMPHIER as _Employee on
+$projection.Empid = _Employee.Employee
+{
+    key zoft_emp_hrs.empid as Empid,
+    @DefaultAggregation: #SUM
+    @EndUserText.label: 'Planned Effort'
+    zoft_emp_hrs.planned as Planned,
+    @DefaultAggregation: #SUM
+    @EndUserText.label: 'Recorded Effort'
+    zoft_emp_hrs.recorded as Recorded,
+    _Employee.CostCenter,
+    _Employee.EmployeeName,
+    _Employee
+}
+
+
+@AbapCatalog.sqlViewName: 'ZSEPCEMPEFFORT'
+@AbapCatalog.compiler.compareFilter: true
+@AbapCatalog.preserveKey: true
+@AccessControl.authorizationCheck: #CHECK
+@EndUserText.label: 'ZSEP_C_EMP_EFFORT'
+@VDM.viewType: #CONSUMPTION
+@Analytics.query: true
+@OData.publish: true
+define view ZSEP_C_EMP_EFFORT as select from ZSP_CO_EMPHR {
+    @AnalyticsDetails.query:{
+        displayHierarchy: #ON,
+        --add new annotation
+        hierarchySettings.hidePostedNodesValues: true,
+        hierarchyInitialLevel: 2,
+        axis: #ROWS,
+        totals: #HIDE,
+        display: #TEXT_KEY
+    }
+    key Empid,
+    @AnalyticsDetails.query.axis: #COLUMNS
+    Planned,
+    @AnalyticsDetails.query.axis: #COLUMNS
+    Recorded,
+    CostCenter,
+    --comment the text column from main view
+//    @EndUserText.label: 'Employee Name'
+//    @AnalyticsDetails.query.axis: #ROWS
+//    EmployeeName,
+    @AnalyticsDetails.query.formula: 'recorded * 100 / planned'
+    @EndUserText.label: 'Effort Utilization'
+    0 as EffortUtilization
+}
+
+
