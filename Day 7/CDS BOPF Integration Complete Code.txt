@@ -1,0 +1,294 @@
+@EndUserText.label : 'Flight Meals'
+@AbapCatalog.enhancement.category : #NOT_CLASSIFIED
+@AbapCatalog.tableCategory : #TRANSPARENT
+@AbapCatalog.deliveryClass : #A
+@AbapCatalog.dataMaintenance : #ALLOWED
+define table zoft_meals {
+
+  key mandt   : mandt not null;
+  key meal_id : /bobf/uuid not null;
+  carrid      : s_carr_id;
+  connid      : s_conn_id;
+  meal        : s_mealnum;
+  total_seats : s_seatsmax;
+  status      : flag;
+
+}
+
+
+@AbapCatalog.sqlViewName: 'ZHPCXXMEALS'
+@AbapCatalog.compiler.compareFilter: true
+@AbapCatalog.preserveKey: true
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+@EndUserText.label: 'Flight meal CDS view - Business Object'
+@OData.publish: true
+@UI.headerInfo:{
+    typeName: 'Flight',
+    typeNamePlural: 'Flights',
+    title: { value: 'Meal_Id' },
+    description: {value : 'Carrid'},
+    imageUrl: 'https://cdn.dribbble.com/users/8627690/screenshots/16214675/donald_4x.jpg'
+}
+@ObjectModel: {
+    modelCategory: #BUSINESS_OBJECT,
+    compositionRoot: true,
+    writeActivePersistence: 'ZOFT_MEALS',
+    writeDraftPersistence: 'ZHPCD_MEALS',
+    transactionalProcessingEnabled: true,
+    draftEnabled: true,
+    createEnabled: true,
+    updateEnabled: true,
+    deleteEnabled: true
+}
+define view ZHPC_XX_MEALS as select from zoft_meals
+association[1] to scarr as _Airline
+    on $projection.Carrid = _Airline.carrid
+association[1] to spfli as _Connection
+on $projection.Carrid = _Connection.carrid and
+    $projection.Connid = _Connection.connid
+association[1] to smeal as _Meals
+    on $projection.Meal = _Meals.mealnumber
+{   
+    @UI.facet: [{ 
+        type: #COLLECTION,
+        id: 'collection',
+        label: 'More Info',
+        purpose: #STANDARD,
+        position: 1
+     },{
+        type: #IDENTIFICATION_REFERENCE,
+        label: 'Details',
+        position: 1,
+        parentId: 'collection'
+     },{
+        type: #FIELDGROUP_REFERENCE,
+        label: 'Pricing',
+        position: 2,
+        parentId: 'collection',
+        targetQualifier: 'spiderman',
+        purpose: #STANDARD
+     }]
+    key meal_id as Meal_Id,
+    @UI.selectionField: [{ position: 1 }]
+    @UI.lineItem: [{ position: 1 }]
+    @ObjectModel.foreignKey.association: '_Airline'
+    @UI.identification: [{ position: 1 }]
+    carrid as Carrid,
+    @UI.selectionField: [{ position: 2 }]
+    @UI.lineItem: [{ position: 2 }]
+    @ObjectModel.foreignKey.association: '_Connection'
+    @UI.identification: [{ position: 2 }]
+    connid as Connid,
+    @UI.lineItem: [{ position: 3 }]
+    @UI.identification: [{ position: 3 }]
+    meal as Meal,
+    @UI.lineItem: [{ position: 4 }]
+    @UI.fieldGroup: [{ position: 1, qualifier: 'spiderman' }]
+    total_seats as Total_Seats,
+    @UI.selectionField: [{ position: 3 }]
+    @UI.lineItem: [{ position: 5 }]
+    @EndUserText.label: 'Approval Status'
+    @UI.fieldGroup: [{ position: 2, qualifier: 'spiderman' }]
+    status as Status,
+    _Airline,
+    _Connection,
+    _Meals
+}
+
+
+
+----VALIDATIONS
+
+class ZCL_HPC_V_VALIDATE_CARRID definition
+  public
+  inheriting from /BOBF/CL_LIB_V_SUPERCL_SIMPLE
+  final
+  create public .
+
+public section.
+
+  methods /BOBF/IF_FRW_VALIDATION~EXECUTE
+    redefinition .
+protected section.
+private section.
+ENDCLASS.
+
+
+
+CLASS ZCL_HPC_V_VALIDATE_CARRID IMPLEMENTATION.
+
+
+  method /BOBF/IF_FRW_VALIDATION~EXECUTE.
+
+    ""Step 1: declare the incoming data type
+    data : lt_data type ZTHPC_XX_MEALS.
+
+    ""Step 2: read the data in our table which is coming from UI to BOPF to us
+    io_read->retrieve(
+      EXPORTING
+        iv_node                 = is_ctx-node_key
+        it_key                  = it_key
+       IMPORTING
+         et_data                 =  lt_data
+    ).
+    ""Step 3: Validate the data
+    read table lt_data into data(ls_data) index 1.
+
+    select single 'X' into @data(lv_exist) from scarr where carrid = @ls_data-carrid.
+
+    ""Step 4: if we feel data has issues, we raise exception by telling BOPF he error
+    if ( lv_exist <> 'X' ).
+       eo_message = /bobf/cl_frw_factory=>get_message(  ).
+       eo_message->add_message(
+         is_msg       = value #( msgid = 'SY' msgno = 499 msgv1 = 'The Carrid ' msgv2 = ls_data-carrid msgv3 = ' is invalid.' )
+         iv_node      = is_ctx-node_key
+         iv_key       = ls_data-key
+         iv_attribute = ZIF_HPC_XX_MEALS_C=>sc_node_attribute-zhpc_xx_meals-carrid
+         iv_lifetime  = /bobf/cm_frw=>co_lifetime_transition
+       ).
+
+       append value #( key = ls_data-key ) to et_failed_key.
+    ENDIF.
+
+
+
+  endmethod.
+ENDCLASS.
+
+
+-----Action code
+
+class ZCL_HPC_A_APPROVE definition
+  public
+  inheriting from /BOBF/CL_LIB_A_SUPERCL_SIMPLE
+  final
+  create public .
+
+public section.
+
+  methods /BOBF/IF_FRW_ACTION~EXECUTE
+    redefinition .
+protected section.
+private section.
+ENDCLASS.
+
+
+
+CLASS ZCL_HPC_A_APPROVE IMPLEMENTATION.
+
+
+  method /BOBF/IF_FRW_ACTION~EXECUTE.
+
+    ""Step 1: declare the incoming data type
+    data : lt_data type ZTHPC_XX_MEALS.
+
+    ""Step 2: read the data in our table which is coming from UI to BOPF to us
+    io_read->retrieve(
+      EXPORTING
+        iv_node                 = is_ctx-node_key
+        it_key                  = it_key
+       IMPORTING
+         et_data                 =  lt_data
+    ).
+
+    ""Step 3: Read the incoming data from Fiori UI
+    read table lt_data REFERENCE INTO data(lo_row) index 1.
+
+    ""Step 4: Update data into the object
+    lo_row->status = abap_true.
+
+    ""Step 5: inform BOPF to update this data in DB
+    io_modify->update(
+      iv_node           = is_ctx-node_key
+      iv_key            = lo_row->key
+      iv_root_key       = lo_row->key
+      is_data           = lo_row
+      it_changed_fields = value #( ( ZIF_HPC_XX_MEALS_C=>sc_node_attribute-zhpc_xx_meals-status ) )
+    ).
+*    CATCH /bobf/cx_frw_contrct_violation.
+
+  endmethod.
+ENDCLASS.
+
+
+----code to add button
+
+@AbapCatalog.sqlViewName: 'ZHPCXXMEALS'
+@AbapCatalog.compiler.compareFilter: true
+@AbapCatalog.preserveKey: true
+@AccessControl.authorizationCheck: #NOT_REQUIRED
+@EndUserText.label: 'Flight meal CDS view - Business Object'
+@OData.publish: true
+@UI.headerInfo:{
+    typeName: 'Flight',
+    typeNamePlural: 'Flights',
+    title: { value: 'Meal_Id' },
+    description: {value : 'Carrid'},
+    imageUrl: 'https://cdn.dribbble.com/users/8627690/screenshots/16214675/donald_4x.jpg'
+}
+@ObjectModel: {
+    modelCategory: #BUSINESS_OBJECT,
+    compositionRoot: true,
+    writeActivePersistence: 'ZOFT_MEALS',
+    writeDraftPersistence: 'ZHPCD_MEALS',
+    transactionalProcessingEnabled: true,
+    draftEnabled: true,
+    createEnabled: true,
+    updateEnabled: true,
+    deleteEnabled: true
+}
+define view ZHPC_XX_MEALS as select from zoft_meals
+association[1] to scarr as _Airline
+    on $projection.Carrid = _Airline.carrid
+association[1] to spfli as _Connection
+on $projection.Carrid = _Connection.carrid and
+    $projection.Connid = _Connection.connid
+association[1] to smeal as _Meals
+    on $projection.Meal = _Meals.mealnumber
+{   
+    @UI.facet: [{ 
+        type: #COLLECTION,
+        id: 'collection',
+        label: 'More Info',
+        purpose: #STANDARD,
+        position: 1
+     },{
+        type: #IDENTIFICATION_REFERENCE,
+        label: 'Details',
+        position: 1,
+        parentId: 'collection'
+     },{
+        type: #FIELDGROUP_REFERENCE,
+        label: 'Pricing',
+        position: 2,
+        parentId: 'collection',
+        targetQualifier: 'spiderman',
+        purpose: #STANDARD
+     }]
+    key meal_id as Meal_Id,
+    @UI.selectionField: [{ position: 1 }]
+    @UI.lineItem: [{ position: 1 }]
+    @ObjectModel.foreignKey.association: '_Airline'
+    @UI.identification: [{ position: 1 }]
+    carrid as Carrid,
+    @UI.selectionField: [{ position: 2 }]
+    @UI.lineItem: [{ position: 2 }]
+    @ObjectModel.foreignKey.association: '_Connection'
+    @UI.identification: [{ position: 2 }]
+    connid as Connid,
+    @UI.lineItem: [{ position: 3 }]
+    @UI.identification: [{ position: 3 }]
+    meal as Meal,
+    @UI.lineItem: [{ position: 4 }]
+    @UI.fieldGroup: [{ position: 1, qualifier: 'spiderman' }]
+    total_seats as Total_Seats,
+    @UI.selectionField: [{ position: 3 }]
+    @UI.lineItem: [{ position: 5 },
+    {type: #FOR_ACTION, dataAction: 'BOPF:APPROVE', label: 'Approve'}]
+    @EndUserText.label: 'Approval Status'
+    @UI.fieldGroup: [{ position: 2, qualifier: 'spiderman' }]
+    status as Status,
+    _Airline,
+    _Connection,
+    _Meals
+}
