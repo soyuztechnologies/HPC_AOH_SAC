@@ -1,0 +1,61 @@
+//Step 1: What is the value user choose
+var sVal = Dropdown_1.getSelectedKey();
+
+//Step 2: based on the value change the account dimension in table
+if(sVal === "Revenue"){
+	Table_1.getDataSource().setDimensionFilter("Account",["[Account].[parentId].&[Sales_Revenue]","[Account].[parentId].&[Quantity_sold]"]);
+}else{
+	Table_1.getDataSource().setDimensionFilter("Account",["[Account].[parentId].&[Gross_Margin]","[Account].[parentId].&[Discount]"]);
+}
+
+//Step 3: Now we change the chart measures on-fly
+if(sVal === "Revenue"){
+	Chart_1.addMeasure("[Account].[parentId].&[Sales_Revenue]", Feed.ValueAxis);
+	Chart_1.addMeasure("[Account].[parentId].&[Quantity_sold]", Feed.ValueAxis);
+}else{
+	Chart_1.addMeasure("[Account].[parentId].&[Discount]", Feed.ValueAxis);
+	Chart_1.addMeasure("[Account].[parentId].&[Gross_Margin]", Feed.ValueAxis);
+}
+
+if(sVal === "Revenue"){
+	Chart_1.removeMeasure("[Account].[parentId].&[Discount]", Feed.ValueAxis);
+	Chart_1.removeMeasure("[Account].[parentId].&[Gross_Margin]", Feed.ValueAxis);
+}else{
+	Chart_1.removeMeasure("[Account].[parentId].&[Sales_Revenue]", Feed.ValueAxis);
+	Chart_1.removeMeasure("[Account].[parentId].&[Quantity_sold]", Feed.ValueAxis);
+}
+
+--------------------------------------------------------------
+
+Chart_1.getDataSource().copyDimensionFilterFrom(Table_1.getDataSource());
+Chart_2.getDataSource().copyDimensionFilterFrom(Table_1.getDataSource());
+
+
+----------------------------------------------------------------
+
+//Step1: which dimension was chosen
+var sDimension = Dropdown_2.getSelectedKey();
+//Step2: extract the available hierarchies for that dimension
+var aHier = Table_1.getDataSource().getHierarchies(sDimension);
+//Step3: Loop over the hierarchies and fill the 3rd dropdown
+Dropdown_3.removeAllItems();
+for(var i=0; i<aHier.length; i++){
+	Dropdown_3.addItem(aHier[i].id, aHier[i].description);
+}
+
+Table_1.removeDimension(PreviousDimension);
+Table_1.addDimensionToRows(sDimension);
+
+
+PreviousDimension = sDimension;
+
+
+
+--
+var sHier = Dropdown_3.getSelectedKey();
+Table_1.getDataSource().setHierarchy(PreviousDimension,sHier);
+
+
+---------------------------------------------------
+
+
